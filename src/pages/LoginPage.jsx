@@ -1,20 +1,53 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
+import Toast from '../components/Toast';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null); // { message, variant }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // API integration coming soon
+    setSubmitting(true);
+    setToast(null);
+
+    const payload = { email, password };
+    // TODO: wire this up to your login endpoint, e.g.
+    // const res = await fetch('<YOUR_API_BASE_URL>/api/auth/login', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(payload),
+    // });
+    // const data = await res.json();
+    console.log(payload);
+
+    // TEMP placeholder response — replace with the real API response above.
+    // Expecting the backend to tell us whether this account's email is verified.
+    const data = { verified: true };
+
+    setSubmitting(false);
+
+    if (!data.verified) {
+      setToast({ message: 'Please verify your account first, then log in.', variant: 'warning' });
+      setTimeout(() => {
+        navigate('/verify-otp', { state: { email } });
+      }, 1500);
+      return;
+    }
+
+    navigate('/dashboard');
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to continue your journey">
+    <>
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
+      <AuthLayout title="Welcome back" subtitle="Sign in to continue your journey">
       <form onSubmit={handleSubmit} className="space-y-5">
 
         {/* Email */}
@@ -75,11 +108,12 @@ export default function LoginPage() {
         {/* Submit */}
         <button
           type="submit"
+          disabled={submitting}
           className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm tracking-wide mt-1
             bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400
-            text-white shadow-lg shadow-amber-900/40 active:scale-[0.98] transition-all duration-200"
+            text-white shadow-lg shadow-amber-900/40 active:scale-[0.98] transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Sign In
+          {submitting ? 'Signing In...' : 'Sign In'}
           <ArrowRight size={15} />
         </button>
       </form>
@@ -101,6 +135,7 @@ export default function LoginPage() {
           Sign up
         </Link>
       </p>
-    </AuthLayout>
+      </AuthLayout>
+    </>
   );
 }
