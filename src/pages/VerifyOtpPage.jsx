@@ -4,29 +4,25 @@ import { ShieldCheck, ArrowRight, RotateCw } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const RESEND_COOLDOWN = 30; // seconds
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || 'testuser@gmail.com';
+  const email = location.state?.email;
 
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [toast, setToast] = useState(null); // { message, variant }
 
-  // No email means someone landed here directly — send them back to register
   useEffect(() => {
-    if (!email) {
-      navigate('/register', { replace: true });
-    }
+    if (!email) navigate('/register', { replace: true });
   }, [email, navigate]);
 
-  // Resend cooldown ticker
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setInterval(() => setCooldown((c) => c - 1), 1000);
@@ -35,46 +31,61 @@ export default function VerifyOtpPage() {
 
   async function handleGenerateOtp() {
     setSending(true);
-    const payload = { email };
-    // TODO: wire this up to your generate-otp endpoint, e.g.
-    // await fetch('<YOUR_API_BASE_URL>/api/auth/generate-otp', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    console.log(payload);
+    setToast(null);
+    try {
+      const res = await fetch(`${API}/api/auth/generate-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
 
-    setSending(false);
-    setOtpSent(true);
-    setCooldown(RESEND_COOLDOWN);
+      if (!res.ok) {
+        setToast({ message: data.message || 'Failed to send OTP.', variant: 'error' });
+        return;
+      }
+
+      setOtpSent(true);
+      setCooldown(RESEND_COOLDOWN);
+      setToast({ message: 'OTP sent! Check your email.', variant: 'success' });
+    } catch {
+      setToast({ message: 'Network error. Please try again.', variant: 'error' });
+    } finally {
+      setSending(false);
+    }
   }
 
   async function handleVerify(e) {
     e.preventDefault();
     setVerifying(true);
+    setToast(null);
+    try {
+      const res = await fetch(`${API}/api/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
 
-    const payload = { email, otp };
-    // TODO: wire this up to your verify-otp endpoint, e.g.
-    // await fetch('<YOUR_API_BASE_URL>/api/auth/verify-otp', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    console.log(payload);
+      if (!res.ok) {
+        setToast({ message: data.message || 'Verification failed.', variant: 'error' });
+        return;
+      }
 
-    setVerifying(false);
-    setToastMessage("You're verified! Redirecting you to your dashboard...");
-    setShowToast(true);
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1500);
+      setToast({ message: "You're verified! Redirecting to dashboard...", variant: 'success' });
+      setTimeout(() => navigate('/dashboard'), 1500);
+    } catch {
+      setToast({ message: 'Network error. Please try again.', variant: 'error' });
+    } finally {
+      setVerifying(false);
+    }
   }
 
   if (!email) return null;
 
   return (
     <>
-      {showToast && <Toast message={toastMessage} />}
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
       <AuthLayout
         title="Verify your email"
         subtitle={
@@ -97,8 +108,6 @@ export default function VerifyOtpPage() {
           </button>
         ) : (
           <form onSubmit={handleVerify} className="space-y-5">
-
-            {/* OTP */}
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
                 Verification Code
@@ -119,7 +128,6 @@ export default function VerifyOtpPage() {
               </div>
             </div>
 
-            {/* Verify */}
             <button
               type="submit"
               disabled={verifying || otp.length !== 6}
@@ -131,12 +139,11 @@ export default function VerifyOtpPage() {
               <ArrowRight size={15} />
             </button>
 
-            {/* Resend */}
             <button
               type="button"
               onClick={handleGenerateOtp}
               disabled={cooldown > 0 || sending}
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-amber-300/70 hover:text-amber-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-amber-300/70 cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-amber-300/70 hover:text-amber-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <RotateCw size={12} className={sending ? 'animate-spin' : ''} />
               {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
@@ -144,13 +151,9 @@ export default function VerifyOtpPage() {
           </form>
         )}
 
-        {/* Route back to login */}
         <p className="text-center text-sm text-white/40 mt-6">
           Wrong email?{' '}
-          <Link
-            to="/register"
-            className="text-amber-300 hover:text-amber-200 font-medium transition-colors"
-          >
+          <Link to="/register" className="text-amber-300 hover:text-amber-200 font-medium transition-colors">
             Go back
           </Link>
         </p>

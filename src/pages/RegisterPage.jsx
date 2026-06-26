@@ -4,6 +4,8 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -12,33 +14,40 @@ export default function RegisterPage() {
   const [role, setRole] = useState('donor');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showToast, setShowToast] = useState(false);
+  const [toast, setToast] = useState(null); // { message, variant }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    setToast(null);
 
-    const payload = { name, email, password, role };
-    // TODO: wire this up to your register endpoint, e.g.
-    // await fetch('<YOUR_API_BASE_URL>/api/auth/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    console.log(payload);
+    try {
+      const res = await fetch(`${API}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role }),
+      });
 
-    setShowToast(true);
-    // Email is carried over via route state so verify-otp never has to ask for it again
-    setTimeout(() => {
-      navigate('/verify-otp', { state: { email } });
-    }, 1500);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setToast({ message: data.message || 'Registration failed.', variant: 'error' });
+        return;
+      }
+
+      setToast({ message: 'Account created! Verify your email to continue.', variant: 'success' });
+      // Email is carried via route state so VerifyOtpPage never has to ask for it
+      setTimeout(() => navigate('/verify-otp', { state: { email } }), 1500);
+    } catch {
+      setToast({ message: 'Network error. Please try again.', variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <>
-      {showToast && (
-        <Toast message="Account created successfully! Now verify your email to access your dashboard." />
-      )}
+      {toast && <Toast message={toast.message} variant={toast.variant} />}
       <AuthLayout title="Create account" subtitle="Join the Ahaar community today">
       <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -146,20 +155,15 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      {/* Divider */}
       <div className="flex items-center gap-3 my-6">
         <div className="flex-1 h-px bg-white/10" />
         <span className="text-xs text-white/25">or</span>
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      {/* Route back to login */}
       <p className="text-center text-sm text-white/40">
         Already have an account?{' '}
-        <Link
-          to="/login"
-          className="text-amber-300 hover:text-amber-200 font-medium transition-colors"
-        >
+        <Link to="/login" className="text-amber-300 hover:text-amber-200 font-medium transition-colors">
           Sign in
         </Link>
       </p>

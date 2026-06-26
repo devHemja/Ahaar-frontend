@@ -1,74 +1,84 @@
+// ─── ForgotPasswordPage.jsx ───────────────────────────────────────────────────
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Send, ArrowRight, ShieldCheck, ArrowLeft } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
-  
-  // App Workflow States: 1 = Email Input, 2 = OTP Verification
-  const [step, setStep] = useState(1); 
+
+  const [step, setStep] = useState(1); // 1 = email input, 2 = OTP input
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Step 1: Request OTP from backend
+  // Step 1: Send OTP to the user's email
   async function handleSendOtp(e) {
     e.preventDefault();
     setErrorMsg('');
     setSubmitting(true);
 
-    const payload = { email };
-    console.log("Requesting OTP for password reset:", payload);
+    try {
+      const res = await fetch(`${API}/api/auth/forgot-password-send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
 
-    // TODO: Wire to your backend endpoint
-    // const res = await fetch('<YOUR_API_BASE_URL>/api/auth/forgot-password-send-otp', { ... });
-    
-    // Simulate successful backend response check
-    const data = { success: true }; 
+      if (!res.ok) {
+        setErrorMsg(data.message || 'Failed to send OTP. Please try again.');
+        return;
+      }
 
-    setSubmitting(false);
-
-    if (data.success) {
-      setStep(2); // Progress cleanly to the OTP entry block
-    } else {
-      setErrorMsg('No account found with this email or server error.');
+      setStep(2);
+    } catch {
+      setErrorMsg('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  // Step 2: Submit OTP for validation
+  // Step 2: Validate the OTP then move to /reset-password
   async function handleVerifyOtp(e) {
     e.preventDefault();
     setErrorMsg('');
     setSubmitting(true);
 
-    const payload = { email, otp };
-    console.log("Verifying OTP for reset:", payload);
+    try {
+      const res = await fetch(`${API}/api/auth/forgot-password-verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp }),
+      });
+      const data = await res.json();
 
-    // TODO: Wire to your backend validation endpoint
-    // const res = await fetch('<YOUR_API_BASE_URL>/api/auth/forgot-password-verify-otp', { ... });
-    
-    // Simulate validation pass
-    const data = { verified: true }; 
+      if (!res.ok) {
+        setErrorMsg(data.message || 'Invalid or expired verification code. Please try again.');
+        return;
+      }
 
-    setSubmitting(false);
-
-    if (data.verified) {
-      // ✅ SUCCESSFUL: Transition directly to the reset password page with email context state
+      // Carry email + verified flag into the reset page
       navigate('/reset-password', { state: { email, otpVerified: true } });
-    } else {
-      setErrorMsg('Invalid or expired verification code. Please try again.');
+    } catch {
+      setErrorMsg('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
-    <AuthLayout 
-      title={step === 1 ? "Reset password" : "Verify your email"} 
-      subtitle={step === 1 ? "Enter your email and we'll send you a verification code" : `Enter the 6-digit code sent to ${email}`}
+    <AuthLayout
+      title={step === 1 ? 'Reset password' : 'Verify your email'}
+      subtitle={
+        step === 1
+          ? "Enter your email and we'll send you a verification code"
+          : `Enter the 6-digit code sent to ${email}`
+      }
     >
-      {/* Global Error Banner */}
       {errorMsg && (
         <div className="mb-4 rounded-lg px-4 py-3 bg-red-500/20 border border-red-400/30 text-red-200 text-sm text-center">
           {errorMsg}
@@ -76,7 +86,6 @@ export default function ForgotPasswordPage() {
       )}
 
       {step === 1 ? (
-        /* ── STEP 1: EMAIL INPUT FORM ── */
         <form onSubmit={handleSendOtp} className="space-y-5">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
@@ -107,7 +116,6 @@ export default function ForgotPasswordPage() {
           </button>
         </form>
       ) : (
-        /* ── STEP 2: OTP INPUT FORM (Replaces email layout fluidly) ── */
         <form onSubmit={handleVerifyOtp} className="space-y-5">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
@@ -139,7 +147,6 @@ export default function ForgotPasswordPage() {
             <ArrowRight size={15} />
           </button>
 
-          {/* Back button to go back to email input if typed wrong */}
           <button
             type="button"
             onClick={() => setStep(1)}
@@ -150,7 +157,6 @@ export default function ForgotPasswordPage() {
         </form>
       )}
 
-      {/* Footer link back to standard login screen */}
       <p className="text-center text-sm text-white/40 mt-6">
         Remembered your password?{' '}
         <Link to="/login" className="text-amber-300 hover:text-amber-200 font-medium transition-colors">

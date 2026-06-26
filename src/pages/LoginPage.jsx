@@ -4,6 +4,8 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -17,31 +19,33 @@ export default function LoginPage() {
     setSubmitting(true);
     setToast(null);
 
-    const payload = { email, password };
-    // TODO: wire this up to your login endpoint, e.g.
-    // const res = await fetch('<YOUR_API_BASE_URL>/api/auth/login', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    // const data = await res.json();
-    console.log(payload);
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // sends & receives the HTTP-only cookie
+        body: JSON.stringify({ email, password }),
+      });
 
-    // TEMP placeholder response — replace with the real API response above.
-    // Expecting the backend to tell us whether this account's email is verified.
-    const data = { verified: true };
+      const data = await res.json();
 
-    setSubmitting(false);
+      if (!res.ok) {
+        // 403 means account exists but email isn't verified yet
+        if (res.status === 403) {
+          setToast({ message: 'Please verify your account first, then log in.', variant: 'warning' });
+          setTimeout(() => navigate('/verify-otp', { state: { email } }), 1500);
+          return;
+        }
+        setToast({ message: data.message || 'Login failed.', variant: 'error' });
+        return;
+      }
 
-    if (!data.verified) {
-      setToast({ message: 'Please verify your account first, then log in.', variant: 'warning' });
-      setTimeout(() => {
-        navigate('/verify-otp', { state: { email } });
-      }, 1500);
-      return;
+      navigate('/dashboard');
+    } catch {
+      setToast({ message: 'Network error. Please try again.', variant: 'error' });
+    } finally {
+      setSubmitting(false);
     }
-
-    navigate('/dashboard');
   }
 
   return (
@@ -97,12 +101,12 @@ export default function LoginPage() {
 
         {/* Forgot password */}
         <div className="flex justify-end -mt-1">
-          <button
-            type="button"
+          <Link
+            to="/forgot-password"
             className="text-xs text-amber-300/60 hover:text-amber-200 transition-colors"
           >
             Forgot password?
-          </button>
+          </Link>
         </div>
 
         {/* Submit */}
@@ -118,20 +122,15 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {/* Divider */}
       <div className="flex items-center gap-3 my-6">
         <div className="flex-1 h-px bg-white/10" />
         <span className="text-xs text-white/25">or</span>
         <div className="flex-1 h-px bg-white/10" />
       </div>
 
-      {/* Route to register */}
       <p className="text-center text-sm text-white/40">
         Don't have an account?{' '}
-        <Link
-          to="/register"
-          className="text-amber-300 hover:text-amber-200 font-medium transition-colors"
-        >
+        <Link to="/register" className="text-amber-300 hover:text-amber-200 font-medium transition-colors">
           Sign up
         </Link>
       </p>

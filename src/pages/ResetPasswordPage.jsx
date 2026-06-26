@@ -3,14 +3,14 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, ArrowLeft } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ── Grab safe context route variables from your state machine flow ──
-  // Dev mode notice: Fallback variables remain enabled so you can manually preview this page via route paths
-  const email = location.state?.email || 'devmode-test@gmail.com';
-  const otpVerified = location.state?.otpVerified || true;
+  const email = location.state?.email;
+  const otpVerified = location.state?.otpVerified;
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,25 +20,22 @@ export default function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Security Guard: Kick unverified navigation back to start the flow over
+  // Guard: kick users who didn't come through the proper flow
   useEffect(() => {
-    if (!location.state?.email && !window.location.hostname.includes('localhost')) {
+    if (!email || !otpVerified) {
       navigate('/forgot-password', { replace: true });
     }
-  }, [location.state, navigate]);
+  }, [email, otpVerified, navigate]);
 
-  // Comprehensive password safety strength calculator engine
   function passwordStrength(pwd) {
     if (pwd.length === 0) return { label: '', color: '' };
     if (pwd.length < 6) return { label: 'Weak', color: 'text-red-400' };
     if (pwd.length < 8) return { label: 'Fair', color: 'text-amber-400' };
-    
     const hasUpper = /[A-Z]/.test(pwd);
     const hasLower = /[a-z]/.test(pwd);
     const hasNum = /\d/.test(pwd);
     const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
     const score = [hasUpper, hasLower, hasNum, hasSpecial].filter(Boolean).length;
-    
     if (score >= 3 && pwd.length >= 8) return { label: 'Strong', color: 'text-emerald-400' };
     return { label: 'Good', color: 'text-amber-300' };
   }
@@ -49,7 +46,6 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    // Field Rule Guard Checks
     if (newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -61,26 +57,28 @@ export default function ResetPasswordPage() {
 
     setSubmitting(true);
 
-    const payload = { email, newPassword };
-    console.log("Transmitting password transformation payload:", payload);
+    try {
+      const res = await fetch(`${API}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // The backend only needs email + newPassword.
+        // The OTP was already validated in the previous step.
+        body: JSON.stringify({ email, newPassword }),
+      });
+      const data = await res.json();
 
-    // TODO: Wire up your actual API reset execution endpoint here
-    // const res = await fetch('<YOUR_API_BASE_URL>/api/auth/reset-password', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    
-    // Simulating instant database mutation acknowledgment 
-    setTimeout(() => {
-      setSubmitting(false);
+      if (!res.ok) {
+        setError(data.message || 'Failed to reset password. Please start over.');
+        return;
+      }
+
       setSuccess(true);
-      
-      // Navigate to login screen automatically after presentation delay
-      setTimeout(() => {
-        navigate('/login');
-      }, 1800);
-    }, 1000);
+      setTimeout(() => navigate('/login'), 1800);
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!email) return null;
@@ -88,26 +86,22 @@ export default function ResetPasswordPage() {
   return (
     <AuthLayout title="Create new password" subtitle={`Resetting for ${email}`}>
       {success ? (
-        /* ── SUCCESS REDIRECT PRESENTATION BLOCK ── */
-        <div className="text-center py-6 animate-fadeIn">
+        <div className="text-center py-6">
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
             <Check size={24} className="text-emerald-400" />
           </div>
           <p className="text-white font-semibold mb-1 text-base">Password updated successfully!</p>
-          <p className="text-sm text-amber-200/60">Redirecting to login dashboard secure vault...</p>
+          <p className="text-sm text-amber-200/60">Redirecting to login...</p>
         </div>
       ) : (
-        /* ── PASSWORD MODIFICATION RESET ENTRY FORM ── */
-        <form onSubmit={handleSubmit} className="space-y-5 animate-fadeIn">
-
-          {/* Error Message Bar Banner Row */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="rounded-xl px-4 py-3 bg-red-500/20 border border-red-400/30 text-red-200 text-sm text-center font-medium">
               ⚠️ {error}
             </div>
           )}
 
-          {/* Field Slot 1: New Password Input Area */}
+          {/* New Password */}
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
               New Password
@@ -133,12 +127,12 @@ export default function ResetPasswordPage() {
             </div>
             {strength.label && (
               <p className={`text-xs font-medium ${strength.color} pt-0.5`}>
-                Password security tracking: <span className="font-bold underline">{strength.label}</span>
+                Strength: <span className="font-bold underline">{strength.label}</span>
               </p>
             )}
           </div>
 
-          {/* Field Slot 2: Confirm Password Input Area */}
+          {/* Confirm Password */}
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
               Confirm New Password
@@ -167,7 +161,6 @@ export default function ResetPasswordPage() {
             )}
           </div>
 
-          {/* Submit Reset Button Trigger Action */}
           <button
             type="submit"
             disabled={submitting || !newPassword || newPassword !== confirmPassword}
@@ -175,17 +168,16 @@ export default function ResetPasswordPage() {
               bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400
               text-white shadow-lg shadow-amber-900/40 active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {submitting ? 'Updating Database Records...' : 'Reset Password'}
+            {submitting ? 'Updating...' : 'Reset Password'}
           </button>
 
-          {/* Explicit Back to Login Navigation link option fallback row */}
           <div className="text-center pt-2">
             <Link
               to="/login"
               className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-300/60 hover:text-amber-200 transition-colors"
             >
               <ArrowLeft size={13} />
-              Return to login portal
+              Return to login
             </Link>
           </div>
         </form>
