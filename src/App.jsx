@@ -10,6 +10,8 @@ import NearbyNGOsPage from './pages/NearbyNGOsPage';
 import TrackDeliveryPage from './pages/TrackDeliveryPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
           <Route path="/track-delivery" element={<TrackDeliveryPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/login" replace />} />

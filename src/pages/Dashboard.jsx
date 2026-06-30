@@ -81,7 +81,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {dummyListings.map((listing) => (
+            {dummyListings.slice(0,2).map((listing) => (
               <ListingCard
                 key={listing.id}
                 listing={listing}
@@ -109,7 +109,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {dummyNGOs.map((ngo) => (
+            {dummyNGOs.slice(0,3).map((ngo) => (
               <NGOListItem key={ngo.id} ngo={ngo} tokens={tokens} />
             ))}
           </div>

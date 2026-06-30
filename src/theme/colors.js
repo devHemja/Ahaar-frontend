@@ -12,6 +12,8 @@ const palette = {
   emerald600: '#059669',
   blue500: '#3B82F6',
   blue600: '#2563EB',
+  red500: '#EF4444',
+  red600: '#DC2626',
 };
 
 export const darkTokens = {
@@ -51,6 +53,11 @@ export const darkTokens = {
   statusMatchedBg: 'rgba(59, 130, 246, 0.18)',
   statusMatchedText: '#60A5FA',
 
+  // Danger / destructive actions
+  dangerBg: 'rgba(239, 68, 68, 0.12)',
+  dangerText: '#F87171',
+  dangerBorder: 'rgba(239, 68, 68, 0.3)',
+
   shadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
 };
 
@@ -89,6 +96,10 @@ export const lightTokens = {
   statusPendingText: '#B45309',
   statusMatchedBg: 'rgba(37, 99, 235, 0.12)',
   statusMatchedText: '#1D4ED8',
+
+  dangerBg: 'rgba(220, 38, 38, 0.08)',
+  dangerText: '#DC2626',
+  dangerBorder: 'rgba(220, 38, 38, 0.25)',
 
   shadow: '0 4px 16px rgba(28, 20, 16, 0.07)',
 };
