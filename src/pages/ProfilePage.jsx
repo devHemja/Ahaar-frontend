@@ -1,17 +1,35 @@
-import { useState } from 'react';
-import { MapPin, Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MapPin, Calendar, Loader2, AlertTriangle, LocateFixed } from 'lucide-react';
 import { useTheme } from '../context/useTheme';
-import { dummyUser, dummyStats } from '../data/dummyData';
+import { useAuth } from '../context/useAuth';
+import { apiFetch } from '../lib/api';
 import Toast from '../components/Toast';
 
 export default function ProfilePage() {
   const { tokens } = useTheme();
+  const { user, refetch, logout } = useAuth();
 
-  const [name, setName] = useState(dummyUser.name);
-  const [location, setLocation] = useState(dummyUser.location);
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [stats, setStats] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [toast, setToast] = useState(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setAddress(user.address || '');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role !== 'donor') return;
+    apiFetch('/api/users/me/stats')
+      .then((data) => setStats(data.stats))
+      .catch(() => setStats(null));
+  }, [user]);
 
   const fieldStyle = {
     backgroundColor: tokens.bgCard,
@@ -23,21 +41,50 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
 
-    const payload = { name, location };
-    // TODO: wire this up to your profile-update endpoint, e.g.
-    // await fetch('<YOUR_API_BASE_URL>/api/users/me', {
-    //   method: 'PUT',
-    //   credentials: 'include',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(payload),
-    // });
-    console.log(payload);
+    try {
+      await apiFetch('/api/users/me', { method: 'PUT', body: { name, address } });
+      await refetch();
+      setToast({ message: 'Profile updated successfully.', variant: 'success' });
+    } catch (err) {
+      setToast({ message: err.message || 'Failed to update profile.', variant: 'error' });
+    } finally {
+      setSaving(false);
+      setTimeout(() => setToast(null), 2000);
+    }
+  }
 
-    await new Promise((resolve) => setTimeout(resolve, 500)); // simulate network delay
+  function handleDetectLocation() {
+    if (!navigator.geolocation) {
+      setToast({ message: 'Geolocation is not supported by this browser.', variant: 'error' });
+      return;
+    }
 
-    setSaving(false);
-    setToast({ message: 'Profile updated successfully.', variant: 'success' });
-    setTimeout(() => setToast(null), 2000);
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          await apiFetch('/api/auth/location', {
+            method: 'PUT',
+            body: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+          });
+          await refetch();
+          setToast({ message: 'Location updated! You\'ll now see nearby matches.', variant: 'success' });
+        } catch (err) {
+          setToast({ message: err.message || 'Failed to save location.', variant: 'error' });
+        } finally {
+          setLocating(false);
+          setTimeout(() => setToast(null), 2500);
+        }
+      },
+      () => {
+        setLocating(false);
+        setToast({ message: 'Location permission denied.', variant: 'error' });
+        setTimeout(() => setToast(null), 2500);
+      }
+    );
   }
 
   function handleDeleteAccount() {
@@ -45,12 +92,14 @@ export default function ProfilePage() {
       setConfirmingDelete(true);
       return;
     }
-    // TODO: wire this up to your account-deletion endpoint once it exists.
-    // Deliberately not calling anything destructive yet — this is dummy data.
-    setToast({ message: 'Account deletion is not yet connected to a backend.', variant: 'warning' });
+    setToast({ message: 'Account deletion is not yet available. Contact support to close your account.', variant: 'warning' });
     setConfirmingDelete(false);
     setTimeout(() => setToast(null), 2500);
   }
+
+  if (!user) return null;
+
+  const hasCoordinates = user.location?.coordinates?.length === 2;
 
   return (
     <div>
@@ -70,46 +119,50 @@ export default function ProfilePage() {
             className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white shrink-0"
             style={{ background: `linear-gradient(135deg, ${tokens.brandPrimary}, ${tokens.brandSecondary})` }}
           >
-            {dummyUser.name.charAt(0)}
+            {(user.name || '?').charAt(0)}
           </div>
           <div className="min-w-0">
             <p className="text-xl font-bold truncate" style={{ color: tokens.textPrimary }}>
-              {dummyUser.name}
+              {user.name}
             </p>
             <span
-              className="inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+              className="inline-block mt-1 text-xs font-semibold px-2.5 py-1 rounded-full capitalize"
               style={{ backgroundColor: tokens.bgChipAmber, color: tokens.brandPrimary }}
             >
-              {dummyUser.role}
+              {user.role}
             </span>
-            <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: tokens.textMuted }}>
-              <Calendar size={12} />
-              Joined {dummyUser.joinedDate}
-            </div>
+            {user.createdAt && (
+              <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: tokens.textMuted }}>
+                <Calendar size={12} />
+                Joined {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Stats summary */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Meals Rescued', value: dummyStats.mealsRescued },
-            { label: 'Donations', value: dummyStats.totalDonations },
-            { label: 'NGOs Reached', value: dummyStats.ngosReached },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl border p-4 text-center theme-transition"
-              style={{ backgroundColor: tokens.bgCard, borderColor: tokens.borderColor }}
-            >
-              <p className="text-xl font-bold" style={{ color: tokens.textPrimary }}>
-                {stat.value}
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: tokens.textSecondary }}>
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
+        {/* Stats summary (donors only) */}
+        {stats && (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Meals Rescued', value: stats.mealsRescued },
+              { label: 'Donations', value: stats.totalDonations },
+              { label: 'NGOs Reached', value: stats.ngosReached },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-2xl border p-4 text-center theme-transition"
+                style={{ backgroundColor: tokens.bgCard, borderColor: tokens.borderColor }}
+              >
+                <p className="text-xl font-bold" style={{ color: tokens.textPrimary }}>
+                  {stat.value}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: tokens.textSecondary }}>
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Account details form */}
         <form
@@ -123,7 +176,7 @@ export default function ProfilePage() {
 
           <div>
             <label className="block text-sm font-semibold mb-2" style={{ color: tokens.textPrimary }}>
-              Full Name
+              {user.role === 'ngo' ? 'Organization Name' : 'Full Name'}
             </label>
             <input
               type="text"
@@ -142,7 +195,7 @@ export default function ProfilePage() {
             <input
               type="email"
               disabled
-              value={dummyUser.email}
+              value={user.email}
               className="w-full rounded-xl border px-4 py-2.5 text-sm outline-none opacity-60 cursor-not-allowed"
               style={fieldStyle}
             />
@@ -163,13 +216,28 @@ export default function ProfilePage() {
               />
               <input
                 type="text"
-                required
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g. Connaught Place, New Delhi"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm outline-none"
                 style={fieldStyle}
               />
             </div>
+            <button
+              type="button"
+              onClick={handleDetectLocation}
+              disabled={locating}
+              className="mt-2 flex items-center gap-1.5 text-xs font-semibold cursor-pointer hover:opacity-75 transition-opacity disabled:opacity-50"
+              style={{ color: tokens.brandPrimary }}
+            >
+              {locating ? <Loader2 size={13} className="animate-spin" /> : <LocateFixed size={13} />}
+              {hasCoordinates ? 'Update precise location' : 'Detect my precise location'}
+            </button>
+            <p className="text-xs mt-1.5" style={{ color: tokens.textMuted }}>
+              {hasCoordinates
+                ? 'Precise coordinates are set — this powers nearby matching.'
+                : 'Set your precise coordinates so NGOs and listings near you can match correctly.'}
+            </p>
           </div>
 
           <button
@@ -182,6 +250,16 @@ export default function ProfilePage() {
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
+
+        {/* Sign out */}
+        <button
+          type="button"
+          onClick={logout}
+          className="w-full rounded-xl px-6 py-3 text-sm font-semibold border cursor-pointer transition-colors"
+          style={{ borderColor: tokens.borderColor, color: tokens.textSecondary }}
+        >
+          Sign Out
+        </button>
 
         {/* Danger zone */}
         <div

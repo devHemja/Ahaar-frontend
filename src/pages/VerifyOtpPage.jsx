@@ -11,6 +11,7 @@ export default function VerifyOtpPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email;
+  const role = location.state?.role; 
 
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -71,9 +72,14 @@ export default function VerifyOtpPage() {
         setToast({ message: data.message || 'Verification failed.', variant: 'error' });
         return;
       }
+      const destination = role === 'ngo' ? '/ngo-verify' : '/dashboard';
+      const successMsg =
+        role === 'ngo'
+          ? "Email verified! Now let's confirm your NGO registration."
+          : "You're verified! Redirecting to dashboard...";
 
-      setToast({ message: "You're verified! Redirecting to dashboard...", variant: 'success' });
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setToast({ message: successMsg, variant: 'success' });
+      setTimeout(() => navigate(destination, { state: { email } }), 1500);
     } catch {
       setToast({ message: 'Network error. Please try again.', variant: 'error' });
     } finally {

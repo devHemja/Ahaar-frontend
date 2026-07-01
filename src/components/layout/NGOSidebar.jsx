@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutGrid, UtensilsCrossed, Building2, Truck, Bell, UserCircle, ChevronRight, LogOut, Info, Mail } from 'lucide-react';
+import {
+  LayoutGrid, Search, ClipboardList, Bell,
+  UserCircle, ChevronRight, LogOut, Info, Mail,
+} from 'lucide-react';
 import AhaarLogo from '../AhaarLogo';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../../context/useTheme';
 import { useAuth } from '../../context/useAuth';
 import { apiFetch } from '../../lib/api';
 
-export default function Sidebar() {
+export default function NGOSidebar() {
   const { tokens, mode } = useTheme();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -20,25 +23,17 @@ export default function Sidebar() {
   }, []);
 
   const NAV_ITEMS = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { to: '/donate-food', label: 'Donate Food', icon: UtensilsCrossed },
-    { to: '/nearby-ngos', label: 'Nearby NGOs', icon: Building2 },
-    { to: '/track-delivery', label: 'Track Delivery', icon: Truck },
-    { to: '/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : null },
-    { to: '/profile', label: 'Profile', icon: UserCircle },
+    { to: '/ngo-dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { to: '/ngo/browse-food', label: 'Browse Food', icon: Search },
+    { to: '/ngo/active-claims', label: 'Active Claims', icon: ClipboardList },
+    { to: '/ngo/notifications', label: 'Notifications', icon: Bell, badge: unreadCount > 0 ? unreadCount : null },
+    { to: '/ngo/profile', label: 'Profile', icon: UserCircle },
   ];
 
-  // Informational pages, kept visually separate from the core workflow
-  // items above since they're not part of the donation flow itself.
   const SECONDARY_NAV_ITEMS = [
-    { to: '/about', label: 'About', icon: Info },
-    { to: '/contact', label: 'Contact Us', icon: Mail },
+    { to: '/ngo/about', label: 'About', icon: Info },
+    { to: '/ngo/contact', label: 'Contact Us', icon: Mail },
   ];
-
-  async function handleSignOut() {
-    await logout();
-    navigate('/login');
-  }
 
   function renderNavItem(item) {
     return (
@@ -81,17 +76,14 @@ export default function Sidebar() {
       className="flex flex-col w-72 shrink-0 h-screen sticky top-0 border-r theme-transition"
       style={{ backgroundColor: tokens.bgSidebar, borderColor: tokens.borderColor }}
     >
-      {/* Logo */}
       <div className="px-6 pt-7 pb-6">
         <AhaarLogo size={40} variant={mode === 'dark' ? 'light' : 'dark'} />
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-4 overflow-y-auto">
         <div className="space-y-1">
           {NAV_ITEMS.map(renderNavItem)}
         </div>
-
         <div
           className="mt-4 pt-4 border-t space-y-1"
           style={{ borderColor: tokens.borderSubtle }}
@@ -100,7 +92,6 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer: profile + theme toggle + sign out */}
       <div className="px-4 pb-5 pt-3 border-t" style={{ borderColor: tokens.borderColor }}>
         <div className="flex items-center justify-between mb-4 px-1">
           <div className="flex items-center gap-3 min-w-0">
@@ -114,17 +105,16 @@ export default function Sidebar() {
               <p className="text-sm font-bold truncate" style={{ color: tokens.textPrimary }}>
                 {user?.name}
               </p>
-              <p className="text-xs capitalize" style={{ color: tokens.textMuted }}>
-                {user?.role}
+              <p className="text-xs" style={{ color: tokens.textMuted }}>
+                NGO
               </p>
             </div>
           </div>
           <ThemeToggle />
         </div>
-
         <button
           type="button"
-          onClick={handleSignOut}
+          onClick={async () => { await logout(); navigate('/login'); }}
           className="flex items-center gap-2 text-sm font-medium px-1 cursor-pointer transition-colors hover:opacity-75"
           style={{ color: tokens.textSecondary }}
         >

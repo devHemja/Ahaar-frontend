@@ -3,6 +3,14 @@
 // docs (foodType, quantity, status, etc.) so wiring up the real
 // /api/food and /api/ngos/nearby endpoints later is a drop-in swap.
 
+export const validNGORegistrationNumbers = [
+  'NGO-DL-2021-00142',
+  'NGO-MH-2019-00387',
+  'NGO-KA-2020-00561',
+  'NGO-UP-2018-00234',
+  'NGO-TN-2022-00098',
+];
+
 
 export const dummyStats = {
   mealsRescued: 320,

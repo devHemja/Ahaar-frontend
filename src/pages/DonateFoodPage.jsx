@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChefHat, Carrot, Package, Box, Camera, X, Loader2 } from 'lucide-react';
 import { useTheme } from '../context/useTheme';
 import Toast from '../components/Toast';
+import { apiFetch } from '../lib/api';
 
 const FOOD_TYPES = [
   { value: 'cooked', label: 'Cooked', icon: ChefHat },
@@ -39,24 +40,25 @@ export default function DonateFoodPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    setToast(null);
 
-    const payload = { foodType, quantity, description, expiresAt };
-    // TODO: wire this up to your create-listing endpoint, e.g.
-    // const formData = new FormData();
-    // Object.entries(payload).forEach(([key, value]) => formData.append(key, value));
-    // if (photoFile) formData.append('photo', photoFile);
-    // await fetch('<YOUR_API_BASE_URL>/api/food', {
-    //   method: 'POST',
-    //   credentials: 'include',
-    //   body: formData,
-    // });
-    console.log(payload, photoFile);
+    try {
+      const formData = new FormData();
+      formData.append('foodType', foodType);
+      formData.append('quantity', quantity);
+      formData.append('description', description);
+      formData.append('expiresAt', new Date(expiresAt).toISOString());
+      if (photoFile) formData.append('photo', photoFile);
 
-    await new Promise((resolve) => setTimeout(resolve, 600)); // simulate network delay
+      await apiFetch('/api/food', { method: 'POST', body: formData });
 
-    setSubmitting(false);
-    setToast({ message: 'Listing posted! Nearby NGOs have been notified.', variant: 'success' });
-    setTimeout(() => navigate('/dashboard'), 1400);
+      setToast({ message: 'Listing posted! Nearby NGOs have been notified.', variant: 'success' });
+      setTimeout(() => navigate('/dashboard'), 1400);
+    } catch (err) {
+      setToast({ message: err.message || 'Failed to post listing.', variant: 'error' });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const fieldStyle = {

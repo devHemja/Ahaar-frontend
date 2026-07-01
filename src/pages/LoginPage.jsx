@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
+import { useAuth } from '../context/useAuth';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { refetch } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +42,18 @@ export default function LoginPage() {
         return;
       }
 
-      navigate('/dashboard');
+      setToast({ message: 'Login successful! Redirecting...', variant: 'success' });
+      await refetch();
+
+      // 🌟 DYNAMIC ROLE-BASED DASHBOARD ROUTING MATRIX
+      setTimeout(() => {
+        if (data.user && data.user.role === 'ngo') {
+          navigate('/ngo-dashboard');
+        } else {
+          navigate('/dashboard'); // Standard Donor View Layout
+        }
+      }, 1000);
+
     } catch {
       setToast({ message: 'Network error. Please try again.', variant: 'error' });
     } finally {

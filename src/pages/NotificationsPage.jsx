@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Megaphone, CheckCircle2, PackageCheck, CheckCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Megaphone, CheckCircle2, PackageCheck, CheckCheck, Loader2 } from 'lucide-react';
 import { useTheme } from '../context/useTheme';
-import { dummyNotifications } from '../data/dummyData';
+import { apiFetch } from '../lib/api';
+import { timeAgo } from '../lib/time';
 
 const TYPE_META = {
   food_alert: { icon: Megaphone, color: 'iconAmber', chip: 'bgChipAmber' },
@@ -11,18 +12,45 @@ const TYPE_META = {
 
 export default function NotificationsPage() {
   const { tokens } = useTheme();
-  const [notifications, setNotifications] = useState(dummyNotifications);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await apiFetch('/api/notifications');
+        if (!cancelled) setNotifications(data.data || []);
+      } catch {
+        // Leave the list empty; the empty state below covers this.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  function markAsRead(id) {
-    // TODO: PUT /api/notifications/:id/read once the API is wired up
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+  async function markAsRead(id) {
+    setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+    try {
+      await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+    } catch {
+      // Best-effort — the optimistic update already reflects locally.
+    }
   }
 
-  function markAllAsRead() {
-    // TODO: PUT /api/notifications/read-all once the API is wired up
+  async function markAllAsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      await apiFetch('/api/notifications/read-all', { method: 'PUT' });
+    } catch {
+      // Best-effort — the optimistic update already reflects locally.
+    }
   }
 
   return (
@@ -47,7 +75,11 @@ export default function NotificationsPage() {
         {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}` : "You're all caught up"}
       </p>
 
-      {notifications.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20" style={{ color: tokens.textMuted }}>
+          <Loader2 size={22} className="animate-spin" />
+        </div>
+      ) : notifications.length === 0 ? (
         <div
           className="rounded-2xl border flex flex-col items-center justify-center text-center py-20 px-6"
           style={{ backgroundColor: tokens.bgCard, borderColor: tokens.borderColor }}
@@ -67,9 +99,9 @@ export default function NotificationsPage() {
 
             return (
               <button
-                key={note.id}
+                key={note._id}
                 type="button"
-                onClick={() => markAsRead(note.id)}
+                onClick={() => markAsRead(note._id)}
                 className="w-full flex items-start gap-3.5 rounded-2xl border p-4 text-left cursor-pointer transition-colors theme-transition"
                 style={{
                   backgroundColor: note.isRead ? tokens.bgCard : tokens.bgChipAmber,
@@ -91,7 +123,7 @@ export default function NotificationsPage() {
                     {note.message}
                   </p>
                   <p className="text-xs mt-1" style={{ color: tokens.textMuted }}>
-                    {note.timeAgo}
+                    {timeAgo(note.createdAt)}
                   </p>
                 </div>
 

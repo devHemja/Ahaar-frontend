@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
 const VARIANTS = {
   success: {
@@ -14,6 +14,13 @@ const VARIANTS = {
     iconColor: 'text-amber-400',
     text: 'text-amber-50',
     Icon: AlertTriangle,
+  },
+  error: {
+    border: 'border-red-400/20',
+    bg: 'bg-red-950/90',
+    iconColor: 'text-red-400',
+    text: 'text-red-50',
+    Icon: XCircle,
   },
 };
 

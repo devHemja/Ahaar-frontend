@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('donor');
+  const [regNumber, setRegNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null); // { message, variant }
@@ -25,7 +26,7 @@ export default function RegisterPage() {
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role }),
+        body: JSON.stringify({ name, email, password, role, ...(role === 'ngo' ? { regNumber } : {}) }),
       });
 
       const data = await res.json();
@@ -35,9 +36,14 @@ export default function RegisterPage() {
         return;
       }
 
-      setToast({ message: 'Account created! Verify your email to continue.', variant: 'success' });
-      // Email is carried via route state so VerifyOtpPage never has to ask for it
-      setTimeout(() => navigate('/verify-otp', { state: { email } }), 1500);
+      setToast({
+        message:
+          role === 'ngo'
+            ? 'Account created! Verify your email first, then complete NGO verification.'
+            : 'Account created! Verify your email to continue.',
+        variant: 'success',
+      });
+      setTimeout(() => navigate('/verify-otp', { state: { email, role } }), 1500);
     } catch {
       setToast({ message: 'Network error. Please try again.', variant: 'error' });
     } finally {
@@ -141,6 +147,23 @@ export default function RegisterPage() {
             ))}
           </div>
         </div>
+
+        {/* NGO Registration Number — only required for NGO accounts */}
+        {role === 'ngo' && (
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium text-amber-100/70 uppercase tracking-wider">
+              NGO Registration Number
+            </label>
+            <input
+              type="text"
+              value={regNumber}
+              onChange={(e) => setRegNumber(e.target.value)}
+              required
+              placeholder="e.g. NGO-IND-2026-991"
+              className="w-full px-4 py-3 rounded-xl text-white placeholder-white/25 text-sm outline-none transition-all duration-200 border border-white/10 focus:border-amber-400/50 bg-white/5 focus:bg-white/8"
+            />
+          </div>
+        )}
 
         {/* Submit */}
         <button
