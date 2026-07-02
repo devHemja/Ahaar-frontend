@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 
-const API = import.meta.env.VITE_API_URL || 'https://ahaarbackendv0.internal.delightfulrock-7a533812.southeastasia.azurecontainerapps.io';
+const API = import.meta.env.VITE_API_URL;
 
 export default function RegisterPage() {
   const navigate = useNavigate();

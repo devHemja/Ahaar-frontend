@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, ArrowLeft } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL;
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();

@@ -5,7 +5,7 @@ import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 import { useAuth } from '../hooks/useAuth';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL;
 const RESEND_COOLDOWN = 30; // seconds
 
 export default function VerifyOtpPage() {

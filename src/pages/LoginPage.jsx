@@ -5,7 +5,7 @@ import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 import { useAuth } from '../context/useAuth';
 
-const API = import.meta.env.VITE_API_URL || 'https://ahaarbackendv0.internal.delightfulrock-7a533812.southeastasia.azurecontainerapps.io';
+const API = import.meta.env.VITE_API_URL;
 
 export default function LoginPage() {
   const navigate = useNavigate();
