@@ -82,7 +82,7 @@ export default function VerifyOtpPage() {
       const successMsg =
         role === 'ngo'
           ? "Email verified! Now let's confirm your NGO registration."
-          : "You're verified! Redirecting to dashboard...";
+          : "You're verified! Redirecting to login...";
 
       setToast({ message: successMsg, variant: 'success' });
       setTimeout(() => navigate(destination, { replace: true }), 1500);
