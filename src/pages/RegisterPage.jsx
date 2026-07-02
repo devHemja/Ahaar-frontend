@@ -4,7 +4,7 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = import.meta.env.VITE_API_URL || 'https://ahaarbackendv0.internal.delightfulrock-7a533812.southeastasia.azurecontainerapps.io';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -25,6 +25,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role, ...(role === 'ngo' ? { regNumber } : {}) }),
       });

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, ArrowRight, RotateCw } from 'lucide-react';
 import AuthLayout from '../components/AuthLayout';
 import Toast from '../components/Toast';
+import { useAuth } from '../hooks/useAuth';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const RESEND_COOLDOWN = 30; // seconds
@@ -10,6 +11,9 @@ const RESEND_COOLDOWN = 30; // seconds
 export default function VerifyOtpPage() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { refetch } = useAuth();
+
   const email = location.state?.email;
   const role = location.state?.role; 
 
@@ -36,6 +40,7 @@ export default function VerifyOtpPage() {
     try {
       const res = await fetch(`${API}/api/auth/generate-otp`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
@@ -72,14 +77,15 @@ export default function VerifyOtpPage() {
         setToast({ message: data.message || 'Verification failed.', variant: 'error' });
         return;
       }
-      const destination = role === 'ngo' ? '/ngo-verify' : '/dashboard';
+      await refetch();
+      const destination = role === 'ngo' ? '/ngo-verify' : '/login';
       const successMsg =
         role === 'ngo'
           ? "Email verified! Now let's confirm your NGO registration."
           : "You're verified! Redirecting to dashboard...";
 
       setToast({ message: successMsg, variant: 'success' });
-      setTimeout(() => navigate(destination, { state: { email } }), 1500);
+      setTimeout(() => navigate(destination, { replace: true }), 1500);
     } catch {
       setToast({ message: 'Network error. Please try again.', variant: 'error' });
     } finally {

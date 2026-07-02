@@ -61,6 +61,7 @@ export default function ResetPasswordPage() {
       const res = await fetch(`${API}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         // The backend only needs email + newPassword.
         // The OTP was already validated in the previous step.
         body: JSON.stringify({ email, newPassword }),
